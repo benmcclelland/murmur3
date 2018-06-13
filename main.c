@@ -33,6 +33,21 @@ char* rand_string_alloc(size_t size)
      return s;
 }
 
+static void printres (char *name, int hashlen, double time_taken, int msglen, unsigned char* hash) {
+    int i;
+
+    printf("%-25s %2d    %.3f    %8.3f    ", name, hashlen, time_taken, msglen/time_taken/1048576);
+    for(i = 0; i < hashlen; i++) printf("%02x", hash[i]);
+    printf("\n");
+}
+
+#define START do { t = clock(); } while(0);
+#define STOP do {                            \
+    t = clock() - t;                         \
+    output_len = 16;                         \
+    time_taken = ((double)t)/CLOCKS_PER_SEC; \
+ } while(0);
+
 int main()
 {
     clock_t t;
@@ -53,36 +68,21 @@ int main()
     printf("HASH                      SIZE  time(s)  perf(MB/s)  Digest\n");
     printf("-----------------------------------------------------------\n");
 
-    t = clock();
+    START
     MurmurHash3_x64_128(input, MSGSZ, seed, murmurhash);
-    t = clock() - t;
-    output_len = 16;
-    time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
+    STOP
+    printres("MurmurHash3_x64_128", output_len, time_taken, MSGSZ, murmurhash);
 
-    printf("%-25s %2d    %.3f    %8.3f    ", "MurmurHash3_x64_128", output_len, time_taken, MSGSZ/time_taken/1048576);
-    for(i = 0; i < output_len; i++) printf("%02x", murmurhash[i]);
-    printf("\n");
-
-    t = clock();
+    START
     PMurHash128x64(input, MSGSZ, seed, murmurhash);
-    t = clock() - t;
-    output_len = 16;
-    time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
+    STOP
+    printres("PMurHash128x64", output_len, time_taken, MSGSZ, murmurhash);
 
-    printf("%-25s %2d    %.3f    %8.3f    ", "PMurHash128x64", output_len, time_taken, MSGSZ/time_taken/1048576);
-    for(i = 0; i < output_len; i++) printf("%02x", murmurhash[i]);
-    printf("\n");
-
-    t = clock();
+    START
     for (i = 0; i < 10; i++) {
         PMurHash128_Process(h, carry, &input[i*(MSGSZ/10)], MSGSZ/10);
     }
     PMurHash128_Result(h, carry, MSGSZ, (uint64_t *)murmurhash);
-    t = clock() - t;
-    output_len = 16;
-    time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
-
-    printf("%-25s %2d    %.3f    %8.3f    ", "PMurHash128x64 - Chunked", output_len, time_taken, MSGSZ/time_taken/1048576);
-    for(i = 0; i < output_len; i++) printf("%02x", murmurhash[i]);
-    printf("\n");
+    STOP
+    printres("PMurHash128x64 - Chunked", output_len, time_taken, MSGSZ, murmurhash);
 }
